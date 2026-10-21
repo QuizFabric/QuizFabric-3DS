@@ -130,7 +130,7 @@ static bool steal_parse_result(void)
 		return true;
 	}
 	snprintf(St.err, sizeof(St.err), "%s",
-	         json_ostr(&doc, 0, "error", "The steal failed"));
+	         json_ostr(&doc, 0, "error", "The download failed"));
 	return false;
 }
 
@@ -260,7 +260,7 @@ static bool steal_keyboard(const char* hint, const char* initial,
 static void steal_do_steal(void)
 {
 	if (!St.input[0]) {
-		snprintf(St.err, sizeof(St.err), "Enter a Kahoot ID, link, or name first");
+		snprintf(St.err, sizeof(St.err), "Enter a search query first");
 		return;
 	}
 	St.err[0] = '\0';
@@ -342,7 +342,7 @@ void steal_input(u32 kDown, touchPosition* touch, bool touched)
 			int tx = touch->px, ty = touch->py;
 			// Input box
 			if (ui_hit(20, 96, BOT_W - 40, 46, tx, ty)) {
-				steal_keyboard("Kahoot ID, link, or name", St.input,
+				steal_keyboard("Search Kahoot for a quiz", St.input,
 				               St.input, sizeof(St.input));
 			} else if (ui_hit(20, 176, BOT_W - 40, 46, tx, ty)) {
 				steal_do_steal();
@@ -414,9 +414,9 @@ void steal_draw_top(void)
 
 	switch (St.phase) {
 	case 0: {
-		ui_text_center_shadow("STEAL A QUIZ", TOP_W / 2, 40, 0.9f, CLR_WHITE);
+		ui_text_center_shadow("DOWNLOAD A QUIZ", TOP_W / 2, 40, 0.9f, CLR_WHITE);
 		static const char* about =
-		    "Grab a public Kahoot quiz by ID, link, or name. The server "
+		    "Search Kahoot for a public quiz - or paste an ID or link. The server "
 		    "converts it (questions AND images) into a QuizFabric quiz that "
 		    "becomes yours to edit and host.";
 		float scale = 0.5f;
@@ -452,7 +452,7 @@ void steal_draw_top(void)
 				ui_text_center("talking to Kahoot...", TOP_W / 2, 162, 0.45f, CLR_SOFT);
 			}
 		} else {
-			ui_text_center_shadow("STEALING...", TOP_W / 2, 84, 0.8f, CLR_WHITE);
+			ui_text_center_shadow("DOWNLOADING...", TOP_W / 2, 84, 0.8f, CLR_WHITE);
 			ui_text_center("Fetching and converting the quiz", TOP_W / 2, 124, 0.5f, CLR_SOFT);
 			{
 				float pct = (float)((osGetTime() / 250) % 1000) / 1000.0f;
@@ -462,7 +462,7 @@ void steal_draw_top(void)
 		break;
 
 	case 2: {
-		ui_text_center_shadow("STOLEN!", TOP_W / 2, 40, 0.95f, CLR_GOOD);
+		ui_text_center_shadow("DOWNLOADED!", TOP_W / 2, 40, 0.95f, CLR_GOOD);
 		ui_text_center("The quiz is now yours", TOP_W / 2, 84, 0.5f, CLR_SOFT);
 		snprintf(buf, sizeof(buf), "Name: %s", St.quizName);
 		float scale = 0.55f;
@@ -482,7 +482,7 @@ void steal_draw_top(void)
 		ui_text_center_shadow("SEARCH RESULTS", TOP_W / 2, 36, 0.85f, CLR_WHITE);
 		snprintf(buf, sizeof(buf), "\"%s\"", St.input);
 		ui_text_center(buf, TOP_W / 2, 72, 0.45f, CLR_DIM);
-		snprintf(buf, sizeof(buf), "%d shown - pick one to steal", St.nResults);
+		snprintf(buf, sizeof(buf), "%d shown - pick one to download", St.nResults);
 		ui_text_center(buf, TOP_W / 2, 96, 0.5f, CLR_SOFT);
 		ui_text_center("Left/Right = jump 5", TOP_W / 2, 216, 0.36f, CLR_DIM);
 
@@ -539,7 +539,7 @@ void steal_draw_bottom(void)
 
 	switch (St.phase) {
 	case 0: {
-		ui_text("KAHOOT ID / LINK / NAME", 20, 72, 0.4f, CLR_DIM);
+		ui_text("KAHOOT SEARCH QUERY", 20, 72, 0.4f, CLR_DIM);
 		ui_panel_hi(20, 96, BOT_W - 40, 46, CLR_GLASS);
 		if (St.input[0]) {
 			snprintf(buf, sizeof(buf), "%.40s", St.input);
@@ -548,7 +548,7 @@ void steal_draw_bottom(void)
 			ui_text_center("tap to enter", BOT_W / 2, 112, 0.5f, CLR_DIM);
 		}
 		ui_tile(20, 176, BOT_W - 40, 46, RGB(255, 110, 199), false);
-		ui_text_center("STEAL", BOT_W / 2, 190, 0.62f, CLR_INK);
+		ui_text_center("DOWNLOAD", BOT_W / 2, 190, 0.62f, CLR_INK);
 		ui_text_center("B = back", BOT_W / 2, 230, 0.38f, CLR_DIM);
 		break;
 	}

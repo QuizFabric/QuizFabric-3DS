@@ -23,7 +23,7 @@ INCLUDES    := source
 
 APP_TITLE       := QuizFabric
 APP_DESCRIPTION := Join live QuizFabric quizzes
-APP_AUTHOR      := adam
+APP_AUTHOR      := Nekky9180
 
 ICON            := assets/icon.png
 BANNER_IMAGE    := assets/banner.png
@@ -35,6 +35,17 @@ VERSION_MINOR := 0
 VERSION_MICRO := 0
 
 #---------------------------------------------------------------------------------
+# Production variant (make PROD=1): hardcoded server, no server field, its own
+# title ID, and a "PRODUCTION" tag on the build number.
+#---------------------------------------------------------------------------------
+ifdef PROD
+TARGET    := QuizFabric3DSProd
+APP_TITLE := QuizFabric Prod
+RSF       := assets/app_prod.rsf
+BUILD     := build_prod
+endif
+
+#---------------------------------------------------------------------------------
 # options for code generation
 #---------------------------------------------------------------------------------
 ARCH    := -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft
@@ -44,6 +55,11 @@ CFLAGS  := -g -Wall -O2 -mword-relocations \
            $(ARCH)
 
 CFLAGS  += $(INCLUDE) -D__3DS__
+
+# Production define must come AFTER the CFLAGS := above or it gets wiped.
+ifdef PROD
+CFLAGS  += -DPROD_BUILD
+endif
 
 CXXFLAGS := $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++11
 

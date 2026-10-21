@@ -42,6 +42,13 @@
 // the console. (7 = tiled-RGBA8 image fix, 45 = close_rst recursion fix)
 #define APP_BUILD "45"
 
+// The production build talks to one fixed server; the dev build keeps the
+// editable server field.
+#ifdef PROD_BUILD
+#define PROD_HOST "play.lucasgeitgey.com"
+#define PROD_PORT 80
+#endif
+
 // The 3DS SOC stack often refuses early connection attempts; retry back to
 // back indefinitely. B cancels, so there is no failure path to worry about.
 #define RETRY_DELAY_MS 0
@@ -1304,7 +1311,11 @@ static void draw_top(void)
 			ui_text_center("Y = offline mode", TOP_W / 2, 226, 0.36f, CLR_DIM);
 		}
 
+#ifdef PROD_BUILD
+		snprintf(buf, sizeof(buf), "PRODUCTION build %s", APP_BUILD);
+#else
 		snprintf(buf, sizeof(buf), "build %s", APP_BUILD);
+#endif
 		ui_text(buf, 10, 222, 0.4f, CLR_DIM);
 		break;
 	}
@@ -1521,22 +1532,38 @@ static void layout_menu(void)
 	s_menuServer.x = 12; s_menuServer.y = 26; s_menuServer.w = BOT_W - 24; s_menuServer.h = 32;
 
 	const float bw = 145.0f, bh = 42.0f, gx = 8.0f, gy = 8.0f;
+#ifdef PROD_BUILD
+	// No server row: the grid moves up into the freed space.
+	s_menuBtn[0].x = 11;      s_menuBtn[0].y = 34;                 // JOIN
+	s_menuBtn[1].x = 11 + bw + gx; s_menuBtn[1].y = 34;            // HOST
+	s_menuBtn[2].x = 11;      s_menuBtn[2].y = 34 + bh + gy;       // CONTROL
+	s_menuBtn[3].x = 11 + bw + gx; s_menuBtn[3].y = 34 + bh + gy;  // SOLO
+#else
 	s_menuBtn[0].x = 11;      s_menuBtn[0].y = 64;                 // JOIN
 	s_menuBtn[1].x = 11 + bw + gx; s_menuBtn[1].y = 64;            // HOST
 	s_menuBtn[2].x = 11;      s_menuBtn[2].y = 64 + bh + gy;       // CONTROL
 	s_menuBtn[3].x = 11 + bw + gx; s_menuBtn[3].y = 64 + bh + gy;  // SOLO
+#endif
 	for (int i = 0; i < 4; i++) {
 		s_menuBtn[i].w = bw;
 		s_menuBtn[i].h = bh;
 	}
 
 	s_menuSteal.x = 11;
+#ifdef PROD_BUILD
+	s_menuSteal.y = 138;
+#else
 	s_menuSteal.y = 168;
+#endif
 	s_menuSteal.w = bw;
 	s_menuSteal.h = 38;
 
 	s_menuDelete.x = 11 + bw + gx;
+#ifdef PROD_BUILD
+	s_menuDelete.y = 138;
+#else
 	s_menuDelete.y = 168;
+#endif
 	s_menuDelete.w = bw;
 	s_menuDelete.h = 38;
 }
@@ -1680,8 +1707,10 @@ static void draw_bottom(void)
 		ui_text("SETUP", 14, 8, 0.5f, CLR_SOFT);
 		ui_text_right("START = quit", BOT_W - 14, 10, 0.38f, CLR_DIM);
 
+#ifndef PROD_BUILD
 		snprintf(buf, sizeof(buf), "%s:%d", G.host, G.port);
 		draw_row(s_menuServer, "SERVER", buf);
+#endif
 
 		draw_menu_btn(0, "JOIN", RGB(56, 214, 160), CLR_INK);
 		draw_menu_btn(1, "HOST", RGB(124, 77, 255), CLR_WHITE);
@@ -1690,7 +1719,7 @@ static void draw_bottom(void)
 
 		ui_tile(s_menuSteal.x, s_menuSteal.y, s_menuSteal.w, s_menuSteal.h,
 		        RGB(255, 110, 199), false);
-		ui_text_center("STEAL", s_menuSteal.x + s_menuSteal.w / 2,
+		ui_text_center("KAHOOT", s_menuSteal.x + s_menuSteal.w / 2,
 		               s_menuSteal.y + 12, 0.55f, CLR_INK);
 
 		ui_tile(s_menuDelete.x, s_menuDelete.y, s_menuDelete.w, s_menuDelete.h,
@@ -2075,9 +2104,12 @@ static void handle_input(u32 kDown, touchPosition* touch, bool touched)
 			solo_offline_mode(true);
 		}
 		if (touched) {
+#ifndef PROD_BUILD
 			if (ui_hit(s_menuServer.x, s_menuServer.y, s_menuServer.w, s_menuServer.h, tx, ty)) {
 				edit_server();
-			} else if (ui_hit(s_menuBtn[0].x, s_menuBtn[0].y, s_menuBtn[0].w, s_menuBtn[0].h, tx, ty)) {
+			} else
+#endif
+			if (ui_hit(s_menuBtn[0].x, s_menuBtn[0].y, s_menuBtn[0].w, s_menuBtn[0].h, tx, ty)) {
 				G.state = ST_JOIN_SETUP;
 			} else if (ui_hit(s_menuBtn[1].x, s_menuBtn[1].y, s_menuBtn[1].w, s_menuBtn[1].h, tx, ty)) {
 				host_start(G.host, G.port);
@@ -2331,6 +2363,11 @@ int main(int argc, char** argv)
 	G.state    = ST_MENU;
 	G.selected = -1;
 	config_load();
+#ifdef PROD_BUILD
+	// Production build: the server is fixed; ignore whatever config.txt says.
+	snprintf(G.host, sizeof(G.host), "%s", PROD_HOST);
+	G.port = PROD_PORT;
+#endif
 	avatars_defaults();
 
 	if (!net_init()) {
