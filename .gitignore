@@ -1,0 +1,12 @@
+# Dev build outputs - the production builds stay tracked.
+QuizFabric3DS.3dsx
+QuizFabric3DS.cia
+QuizFabric3DS.elf
+QuizFabric3DS.smdh
+QuizFabricDS.nds
+
+# Build intermediates.
+build/
+build_prod/
+ds/build/
+ds/build_prod/
