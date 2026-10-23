@@ -36,10 +36,12 @@ void  ui_exit(void);
 void  ui_begin_frame(void);
 
 // Stereoscopic 3D: each stereo pass sets the eye (-1 = left, 0 = 2D,
-// +1 = right). Primitives shift their x by ui_parallax(depth), where the
-// depth is the layer's parallax in pixels, so layers sit at different
-// distances behind (positive) or in front of (negative) the screen.
-void  ui_stereo_set(int eye);
+// +1 = right) and the slider strength (0..1; pass 0 with eye 0 for 2D).
+// Primitives shift their x by ui_parallax(depth), where depth is the
+// layer's parallax in pixels at full strength, so layers sit at different
+// distances behind (positive) or in front of (negative) the screen, and
+// the whole effect scales with how high the 3D slider is.
+void  ui_stereo_set(int eye, float strength);
 float ui_parallax(float depth);
 
 #define PAR_BG    6.0f // gradient + bubbles: farthest away

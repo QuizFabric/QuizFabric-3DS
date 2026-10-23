@@ -40,7 +40,7 @@
 
 // Bump this on every change so the setup screen can prove which CIA is on
 // the console. (7 = tiled-RGBA8 image fix, 45 = close_rst recursion fix)
-#define APP_BUILD "49"
+#define APP_BUILD "50"
 
 // The production build talks to one fixed server; the dev build keeps the
 // editable server field.
@@ -2511,21 +2511,25 @@ int main(int argc, char** argv)
 			stereo = want3d;
 			gfxSet3D(stereo);
 		}
+		// Depth scales with the slider: barely-up is shallow, full is deep.
+		float strength = (slider - 0.2f) / 0.8f;
+		if (strength < 0.0f) strength = 0.0f;
+		if (strength > 1.0f) strength = 1.0f;
 
 		ui_begin_frame();
 		C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
 
 		C2D_TargetClear(top, RGB(120, 60, 200));
 		C2D_SceneBegin(top);
-		ui_stereo_set(-1); // left eye
+		ui_stereo_set(stereo ? -1 : 0, stereo ? strength : 0.0f); // left eye
 		draw_top_screen();
 		if (stereo) {
 			C2D_TargetClear(topR, RGB(120, 60, 200));
 			C2D_SceneBegin(topR);
-			ui_stereo_set(1); // right eye
+			ui_stereo_set(1, strength); // right eye
 			draw_top_screen();
 		}
-		ui_stereo_set(0); // bottom screen is always 2D
+		ui_stereo_set(0, 0.0f); // bottom screen is always 2D
 
 		C2D_TargetClear(bot, RGB(120, 60, 200));
 		C2D_SceneBegin(bot);

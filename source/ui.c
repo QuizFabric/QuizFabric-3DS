@@ -12,11 +12,19 @@ static C2D_TextBuf s_frameBuf   = NULL; // reset every frame
 static C2D_TextBuf s_measureBuf = NULL; // scratch, cleared after each measure
 
 // Stereo eye for the current pass: -1 left, 0 = 2D, +1 right.
-static int s_eye = 0;
+static int   s_eye      = 0;
+static float s_strength = 1.0f;
 
-void ui_stereo_set(int eye) { s_eye = eye; }
+void ui_stereo_set(int eye, float strength)
+{
+	s_eye = eye;
+	s_strength = strength;
+}
 
-float ui_parallax(float depth) { return depth * (float)s_eye; }
+float ui_parallax(float depth)
+{
+	return depth * (float)s_eye * s_strength;
+}
 
 // ------------------------------------------------------------------ emoji
 // A Twemoji atlas (data/emoji.bin, tiled RGBA8) embedded in the binary;
@@ -199,22 +207,26 @@ void ui_bg(float w, float h, float t, float phase)
 	u32 br = ui_lerp(brA, brB, s);
 
 	float px = ui_parallax(PAR_BG);
-	C2D_DrawRectangle(px, 0, 0.0f, w, h, tl, tr, bl, br);
+	// The background extends PAR_BG past both screen edges so the shifted
+	// stereo views never expose the clear colour (and nothing clips).
+	C2D_DrawRectangle(px - PAR_BG, 0, 0.0f, w + PAR_BG * 2.0f, h, tl, tr, bl, br);
 
-	// Drifting bubbles for depth.
+	// Drifting bubbles for depth. The bubble field also spans past the
+	// edges; the wrap point sits PAR_BG further out so bubbles slide fully
+	// off-screen before wrapping in either eye.
 	for (int i = 0; i < BUBBLE_COUNT; i++) {
 		const Bubble* b = &s_bubbles[i];
 		float span = h + b->r * 2.0f;
 		float y = b->y - fmodf(t * b->speed + phase * 30.0f, span);
 		if (y < -b->r) y += span;
-		float x = b->x + sinf(t * 0.5f + (float)i) * b->drift;
-		if (x > w + b->r) x -= w + b->r * 2.0f;
+		float x = b->x - PAR_BG + sinf(t * 0.5f + (float)i) * b->drift;
+		if (x > w + PAR_BG + b->r) x -= w + 2.0f * (b->r + PAR_BG);
 		C2D_DrawCircleSolid(x + px, y, 0.05f, b->r,
 		                    RGBA(255, 255, 255, (u8)(b->alpha * 255.0f)));
 	}
 
 	// Soft vignette at the bottom so light text stays readable.
-	C2D_DrawRectangle(px, h - 46.0f, 0.06f, w, 46.0f,
+	C2D_DrawRectangle(px - PAR_BG, h - 46.0f, 0.06f, w + PAR_BG * 2.0f, 46.0f,
 	                  RGBA(40, 8, 60, 0),  RGBA(40, 8, 60, 0),
 	                  RGBA(40, 8, 60, 70), RGBA(40, 8, 60, 70));
 }
