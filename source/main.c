@@ -40,7 +40,7 @@
 
 // Bump this on every change so the setup screen can prove which CIA is on
 // the console. (7 = tiled-RGBA8 image fix, 45 = close_rst recursion fix)
-#define APP_BUILD "47"
+#define APP_BUILD "48"
 
 // The production build talks to one fixed server; the dev build keeps the
 // editable server field.
@@ -2521,11 +2521,15 @@ int main(int argc, char** argv)
 		C2D_SceneBegin(top);
 		draw_top_screen();
 		if (stereo) {
-			// Right eye: same scene shifted right by the parallax offset.
+			// Right eye: same scene shifted by the parallax offset. The top
+			// framebuffer is TILTED (240x400 in memory, rotated on display):
+			// scene-x lives on the framebuffer's y axis, so the viewport is
+			// (0, shift, 240, 400) - never the scene's 400x240 dimensions.
 			// (C2D_TargetClear resets the viewport, so set it afterwards.)
 			C2D_TargetClear(topR, RGB(120, 60, 200));
 			C2D_SceneBegin(topR);
-			C3D_SetViewport(STEREO_SHIFT, 0, TOP_W, SCR_H);
+			C3D_SetViewport(0, STEREO_SHIFT, topR->frameBuf.width,
+			                topR->frameBuf.height);
 			draw_top_screen();
 		}
 
