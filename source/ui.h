@@ -35,6 +35,17 @@ void  ui_exit(void);
 // Clears the per-frame text buffer. Call once per frame before drawing.
 void  ui_begin_frame(void);
 
+// Stereoscopic 3D: each stereo pass sets the eye (-1 = left, 0 = 2D,
+// +1 = right). Primitives shift their x by ui_parallax(depth), where the
+// depth is the layer's parallax in pixels, so layers sit at different
+// distances behind (positive) or in front of (negative) the screen.
+void  ui_stereo_set(int eye);
+float ui_parallax(float depth);
+
+#define PAR_BG    6.0f // gradient + bubbles: farthest away
+#define PAR_PANEL 3.0f // glass panels, tiles, bars, outlines
+#define PAR_IMAGE -2.0f // question images / banners: pop out slightly
+
 // Animated gradient plus drifting bubbles. `t` is seconds since start;
 // `phase` offsets the animation so the two screens are not identical.
 void  ui_bg(float w, float h, float t, float phase);

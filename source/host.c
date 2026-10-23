@@ -495,7 +495,7 @@ void host_draw_bottom(void)
 			float y = 26 + r * (HOST_TILE_H + HOST_GAPY);
 			bool sel = (pos == H.sel);
 			if (sel) {
-				C2D_DrawRectSolid(x - 2, y - 2, 0.08f,
+				C2D_DrawRectSolid(x - 2 + ui_parallax(PAR_PANEL), y - 2, 0.08f,
 				                  HOST_TILE_W + 4, HOST_TILE_H + 4, CLR_WHITE);
 			}
 			u32 fill = sel ? ui_fade(CLR_GOLD, 0.30f) : CLR_GLASS;

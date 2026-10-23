@@ -934,7 +934,7 @@ void solo_draw_bottom(void)
 			float y = 26 + r * (SOLO_TILE_H + SOLO_GAPY);
 			bool sel = (pos == S.sel);
 			if (sel) {
-				C2D_DrawRectSolid(x - 2, y - 2, 0.08f,
+				C2D_DrawRectSolid(x - 2 + ui_parallax(PAR_PANEL), y - 2, 0.08f,
 				                  SOLO_TILE_W + 4, SOLO_TILE_H + 4, CLR_WHITE);
 			}
 			u32 fill = sel ? ui_fade(CLR_GOLD, 0.30f) : CLR_GLASS;
@@ -1039,7 +1039,7 @@ void solo_draw_bottom(void)
 				}
 				bool sel = (S.selAns == i);
 				if (sel) {
-					C2D_DrawRectSolid(x - 3, y - 3, 0.08f, w + 6, h + 6, CLR_WHITE);
+					C2D_DrawRectSolid(x - 3 + ui_parallax(PAR_PANEL), y - 3, 0.08f, w + 6, h + 6, CLR_WHITE);
 				}
 				ui_tile(x, y, w, h, ui_answer_color(i), sel);
 				float scale = 0.55f;

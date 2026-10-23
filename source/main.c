@@ -40,7 +40,7 @@
 
 // Bump this on every change so the setup screen can prove which CIA is on
 // the console. (7 = tiled-RGBA8 image fix, 45 = close_rst recursion fix)
-#define APP_BUILD "48"
+#define APP_BUILD "49"
 
 // The production build talks to one fixed server; the dev build keeps the
 // editable server field.
@@ -863,7 +863,8 @@ void img_draw_at(float cx, float topY, float maxw, float maxh)
 		sw = maxw;
 	}
 	float sh = (float)g_imgH * s;
-	C2D_DrawImageAt(g_imgImage, cx - sw / 2, topY + (maxh - sh) / 2, 0.5f, NULL, s, s);
+	C2D_DrawImageAt(g_imgImage, cx - sw / 2 + ui_parallax(PAR_IMAGE),
+	                topY + (maxh - sh) / 2, 0.5f, NULL, s, s);
 }
 
 // Decodes a .565 straight from the SD card. Static images are uploaded and
@@ -1336,9 +1337,10 @@ static void draw_top(void)
 		snprintf(buf, sizeof(buf), "PIN %s", G.code);
 		ui_text_center(buf, TOP_W / 2, 150, 0.6f, CLR_GOLD);
 		float d = sinf(G.time * 3.0f) * 0.5f + 0.5f;
-		C2D_DrawCircleSolid(TOP_W / 2 - 22, 194, 0.5f, 5, ui_fade(CLR_WHITE, 0.35f + d * 0.65f));
-		C2D_DrawCircleSolid(TOP_W / 2,      194, 0.5f, 5, ui_fade(CLR_WHITE, 0.35f + (1 - d) * 0.65f));
-		C2D_DrawCircleSolid(TOP_W / 2 + 22, 194, 0.5f, 5, ui_fade(CLR_WHITE, 0.35f + d * 0.65f));
+		float px = ui_parallax(PAR_PANEL);
+		C2D_DrawCircleSolid(TOP_W / 2 - 22 + px, 194, 0.5f, 5, ui_fade(CLR_WHITE, 0.35f + d * 0.65f));
+		C2D_DrawCircleSolid(TOP_W / 2 + px,      194, 0.5f, 5, ui_fade(CLR_WHITE, 0.35f + (1 - d) * 0.65f));
+		C2D_DrawCircleSolid(TOP_W / 2 + 22 + px, 194, 0.5f, 5, ui_fade(CLR_WHITE, 0.35f + d * 0.65f));
 		break;
 	}
 
@@ -2343,13 +2345,9 @@ static void handle_input(u32 kDown, touchPosition* touch, bool touched)
 
 // ----------------------------------------------------------------- entry
 
-// Horizontal parallax between the eyes (pixels). The right eye's viewport is
-// shifted by this much, so with the 3D slider up the whole top screen floats
-// at a fixed depth just behind the screen glass.
-#define STEREO_SHIFT 4
-
 // Draws the current state's top screen into the active render target.
 // Called once per eye when the 3D slider is up, otherwise once (left eye).
+// Depth comes from ui_parallax() per layer (see ui.h), not a viewport shift.
 static void draw_top_screen(void)
 {
 	ui_bg(TOP_W, SCR_H, G.time, 0.0f);
@@ -2519,19 +2517,15 @@ int main(int argc, char** argv)
 
 		C2D_TargetClear(top, RGB(120, 60, 200));
 		C2D_SceneBegin(top);
+		ui_stereo_set(-1); // left eye
 		draw_top_screen();
 		if (stereo) {
-			// Right eye: same scene shifted by the parallax offset. The top
-			// framebuffer is TILTED (240x400 in memory, rotated on display):
-			// scene-x lives on the framebuffer's y axis, so the viewport is
-			// (0, shift, 240, 400) - never the scene's 400x240 dimensions.
-			// (C2D_TargetClear resets the viewport, so set it afterwards.)
 			C2D_TargetClear(topR, RGB(120, 60, 200));
 			C2D_SceneBegin(topR);
-			C3D_SetViewport(0, STEREO_SHIFT, topR->frameBuf.width,
-			                topR->frameBuf.height);
+			ui_stereo_set(1); // right eye
 			draw_top_screen();
 		}
+		ui_stereo_set(0); // bottom screen is always 2D
 
 		C2D_TargetClear(bot, RGB(120, 60, 200));
 		C2D_SceneBegin(bot);

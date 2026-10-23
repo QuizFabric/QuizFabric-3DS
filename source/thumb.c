@@ -284,18 +284,18 @@ void thumb_draw(int idx, float x, float y, float w, float h, bool has_image)
         if ((float)s->w * scl > w) scl = w / (float)s->w;
         float dw = (float)s->w * scl;
         float dh = (float)s->h * scl;
-        C2D_DrawImageAt(s->img, x + (w - dw) / 2.0f, y + (h - dh) / 2.0f,
-                        0.5f, NULL, scl, scl);
+        C2D_DrawImageAt(s->img, x + (w - dw) / 2.0f + ui_parallax(PAR_IMAGE),
+                        y + (h - dh) / 2.0f, 0.5f, NULL, scl, scl);
         return;
     }
-    C2D_DrawRectSolid(x, y, 0.5f, w, h, RGB(59, 59, 67));
+    C2D_DrawRectSolid(x + ui_parallax(PAR_PANEL), y, 0.5f, w, h, RGB(59, 59, 67));
     if (has_image) {
         // Downloading or waiting: a white down-arrow download symbol
         // (stem + triangle) above the progress bar along the bottom. The
         // bar owns the last 6px, so the arrow never gets covered by it.
         bool bar = idx >= 0 && idx < THUMB_SLOTS && s_slots[idx].queued && h >= 14.0f;
         float ab = y + (bar ? h - 6.0f : h); // bottom of the arrow area
-        float cx = x + w / 2.0f;
+        float cx = x + w / 2.0f + ui_parallax(PAR_PANEL);
         float stemTop = y + (ab - y) * 0.12f;
         float stemH = (ab - y) * 0.40f;
         C2D_DrawRectSolid(cx - 1.5f, stemTop, 0.5f, 3.0f, stemH, CLR_WHITE);

@@ -11,6 +11,13 @@
 static C2D_TextBuf s_frameBuf   = NULL; // reset every frame
 static C2D_TextBuf s_measureBuf = NULL; // scratch, cleared after each measure
 
+// Stereo eye for the current pass: -1 left, 0 = 2D, +1 right.
+static int s_eye = 0;
+
+void ui_stereo_set(int eye) { s_eye = eye; }
+
+float ui_parallax(float depth) { return depth * (float)s_eye; }
+
 // ------------------------------------------------------------------ emoji
 // A Twemoji atlas (data/emoji.bin, tiled RGBA8) embedded in the binary;
 // text functions render matching UTF-8 codepoints as sprites.
@@ -191,7 +198,8 @@ void ui_bg(float w, float h, float t, float phase)
 	u32 bl = ui_lerp(blA, blB, s);
 	u32 br = ui_lerp(brA, brB, s);
 
-	C2D_DrawRectangle(0, 0, 0.0f, w, h, tl, tr, bl, br);
+	float px = ui_parallax(PAR_BG);
+	C2D_DrawRectangle(px, 0, 0.0f, w, h, tl, tr, bl, br);
 
 	// Drifting bubbles for depth.
 	for (int i = 0; i < BUBBLE_COUNT; i++) {
@@ -201,12 +209,12 @@ void ui_bg(float w, float h, float t, float phase)
 		if (y < -b->r) y += span;
 		float x = b->x + sinf(t * 0.5f + (float)i) * b->drift;
 		if (x > w + b->r) x -= w + b->r * 2.0f;
-		C2D_DrawCircleSolid(x, y, 0.05f, b->r,
+		C2D_DrawCircleSolid(x + px, y, 0.05f, b->r,
 		                    RGBA(255, 255, 255, (u8)(b->alpha * 255.0f)));
 	}
 
 	// Soft vignette at the bottom so light text stays readable.
-	C2D_DrawRectangle(0, h - 46.0f, 0.06f, w, 46.0f,
+	C2D_DrawRectangle(px, h - 46.0f, 0.06f, w, 46.0f,
 	                  RGBA(40, 8, 60, 0),  RGBA(40, 8, 60, 0),
 	                  RGBA(40, 8, 60, 70), RGBA(40, 8, 60, 70));
 }
@@ -472,32 +480,35 @@ int ui_wrap_fit(const char* s, float maxw, float maxh,
 
 void ui_panel(float x, float y, float w, float h, u32 fill)
 {
-	C2D_DrawRectSolid(x, y, 0.1f, w, h, fill);
+	C2D_DrawRectSolid(x + ui_parallax(PAR_PANEL), y, 0.1f, w, h, fill);
 }
 
 void ui_panel_hi(float x, float y, float w, float h, u32 fill)
 {
-	C2D_DrawRectSolid(x, y, 0.1f, w, h, fill);
+	float px = x + ui_parallax(PAR_PANEL);
+	C2D_DrawRectSolid(px, y, 0.1f, w, h, fill);
 	// 1px inner highlight along the top edge reads as a bevel.
-	C2D_DrawRectSolid(x, y, 0.11f, w, 1.0f, CLR_GLASS_HI);
+	C2D_DrawRectSolid(px, y, 0.11f, w, 1.0f, CLR_GLASS_HI);
 }
 
 void ui_bar(float x, float y, float w, float h, float pct, u32 fill, u32 track)
 {
 	if (pct < 0.0f) pct = 0.0f;
 	if (pct > 1.0f) pct = 1.0f;
-	C2D_DrawRectSolid(x, y, 0.1f, w, h, track);
-	C2D_DrawRectSolid(x, y, 0.11f, w * pct, h, fill);
+	float px = x + ui_parallax(PAR_PANEL);
+	C2D_DrawRectSolid(px, y, 0.1f, w, h, track);
+	C2D_DrawRectSolid(px, y, 0.11f, w * pct, h, fill);
 }
 
 void ui_tile(float x, float y, float w, float h, u32 fill, bool pressed)
 {
 	float off = pressed ? 1.0f : 0.0f;
+	float px = x + ui_parallax(PAR_PANEL);
 	// Drop shadow, then the face, then a top highlight.
-	C2D_DrawRectSolid(x + 2.0f, y + 3.0f, 0.09f, w, h, RGBA(40, 8, 60, 90));
-	C2D_DrawRectSolid(x, y + off, 0.1f, w, h, fill);
-	C2D_DrawRectSolid(x, y + off, 0.11f, w, 2.0f, ui_lerp(fill, CLR_WHITE, 0.35f));
-	C2D_DrawRectSolid(x, y + h - 3.0f + off, 0.11f, w, 3.0f, ui_lerp(fill, CLR_INK, 0.30f));
+	C2D_DrawRectSolid(px + 2.0f, y + 3.0f, 0.09f, w, h, RGBA(40, 8, 60, 90));
+	C2D_DrawRectSolid(px, y + off, 0.1f, w, h, fill);
+	C2D_DrawRectSolid(px, y + off, 0.11f, w, 2.0f, ui_lerp(fill, CLR_WHITE, 0.35f));
+	C2D_DrawRectSolid(px, y + h - 3.0f + off, 0.11f, w, 3.0f, ui_lerp(fill, CLR_INK, 0.30f));
 }
 
 bool ui_hit(float x, float y, float w, float h, int tx, int ty)
