@@ -40,7 +40,7 @@
 
 // Bump this on every change so the setup screen can prove which CIA is on
 // the console. (7 = tiled-RGBA8 image fix, 45 = close_rst recursion fix)
-#define APP_BUILD "45"
+#define APP_BUILD "47"
 
 // The production build talks to one fixed server; the dev build keeps the
 // editable server field.
@@ -2343,6 +2343,25 @@ static void handle_input(u32 kDown, touchPosition* touch, bool touched)
 
 // ----------------------------------------------------------------- entry
 
+// Horizontal parallax between the eyes (pixels). The right eye's viewport is
+// shifted by this much, so with the 3D slider up the whole top screen floats
+// at a fixed depth just behind the screen glass.
+#define STEREO_SHIFT 4
+
+// Draws the current state's top screen into the active render target.
+// Called once per eye when the 3D slider is up, otherwise once (left eye).
+static void draw_top_screen(void)
+{
+	ui_bg(TOP_W, SCR_H, G.time, 0.0f);
+	if (G.state == ST_CONTROL) ctrl_draw_top();
+	else if (G.state == ST_SOLO) solo_draw_top();
+	else if (G.state == ST_HOST) host_draw_top();
+	else if (G.state == ST_STEAL) steal_draw_top();
+	else if (G.state == ST_DELETE) delete_draw_top();
+	else if (G.state == ST_CACHEDEL) cachedel_draw_top();
+	else                        draw_top();
+}
+
 int main(int argc, char** argv)
 {
 	(void)argc;
@@ -2355,7 +2374,9 @@ int main(int argc, char** argv)
 	ui_init();
 
 	C3D_RenderTarget* top = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
+	C3D_RenderTarget* topR = C2D_CreateScreenTarget(GFX_TOP, GFX_RIGHT);
 	C3D_RenderTarget* bot = C2D_CreateScreenTarget(GFX_BOTTOM, GFX_LEFT);
+	bool stereo = false;
 
 	srand((unsigned)osGetTime());
 
@@ -2484,19 +2505,29 @@ int main(int argc, char** argv)
 			if (G.state == ST_QUESTION || G.state == ST_WAITING) img_step();
 		}
 
+		// 3D slider: go stereoscopic while the slider is up. Hysteresis so
+		// the mode doesn't flicker when the slider sits at the threshold.
+		float slider = osGet3DSliderState();
+		bool want3d = slider > 0.4f || (stereo && slider > 0.25f);
+		if (want3d != stereo) {
+			stereo = want3d;
+			gfxSet3D(stereo);
+		}
+
 		ui_begin_frame();
 		C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
 
 		C2D_TargetClear(top, RGB(120, 60, 200));
 		C2D_SceneBegin(top);
-		ui_bg(TOP_W, SCR_H, G.time, 0.0f);
-		if (G.state == ST_CONTROL) ctrl_draw_top();
-		else if (G.state == ST_SOLO) solo_draw_top();
-		else if (G.state == ST_HOST) host_draw_top();
-		else if (G.state == ST_STEAL) steal_draw_top();
-		else if (G.state == ST_DELETE) delete_draw_top();
-		else if (G.state == ST_CACHEDEL) cachedel_draw_top();
-		else                        draw_top();
+		draw_top_screen();
+		if (stereo) {
+			// Right eye: same scene shifted right by the parallax offset.
+			// (C2D_TargetClear resets the viewport, so set it afterwards.)
+			C2D_TargetClear(topR, RGB(120, 60, 200));
+			C2D_SceneBegin(topR);
+			C3D_SetViewport(STEREO_SHIFT, 0, TOP_W, SCR_H);
+			draw_top_screen();
+		}
 
 		C2D_TargetClear(bot, RGB(120, 60, 200));
 		C2D_SceneBegin(bot);
