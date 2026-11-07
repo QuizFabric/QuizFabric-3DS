@@ -41,6 +41,17 @@ jobs:
           echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
           "$RUNNER_TEMP/bin/bannertool" --version
 
+      - name: Install makerom
+        run: |
+          archive="$RUNNER_TEMP/makerom-v0.19.0-ubuntu_x86_64.zip"
+          curl --fail --location --retry 3 \
+            --output "$archive" \
+            https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.19.0/makerom-v0.19.0-ubuntu_x86_64.zip
+          echo "287b809dec064e0ad597e3d272c49ecb7eed41693d5ee6fef9d8a8aa24c249e0  $archive" | sha256sum --check
+          unzip -p "$archive" makerom > "$RUNNER_TEMP/bin/makerom"
+          chmod 0755 "$RUNNER_TEMP/bin/makerom"
+          test -x "$RUNNER_TEMP/bin/makerom"
+
       - name: Set and push app build number
         id: build-number
         env:
@@ -66,7 +77,7 @@ jobs:
             --volume "$RUNNER_TEMP/bin:/tools:ro" \
             --workdir /project \
             devkitpro/devkitarm:latest \
-            bash -c 'set -e; export DEVKITPRO=/opt/devkitpro DEVKITARM=/opt/devkitpro/devkitARM PATH="/tools:/opt/devkitpro/tools/makerom:/opt/devkitpro/tools/bin:/opt/devkitpro/devkitARM/bin:$PATH"; command -v arm-none-eabi-gcc; command -v makerom; command -v bannertool; make PROD=1 clean && make PROD=1'
+            bash -c 'set -e; export DEVKITPRO=/opt/devkitpro DEVKITARM=/opt/devkitpro/devkitARM PATH="/tools:/opt/devkitpro/tools/bin:/opt/devkitpro/devkitARM/bin:$PATH"; command -v arm-none-eabi-gcc; command -v makerom; command -v bannertool; make PROD=1 clean && make PROD=1'
 
       - name: Create GitHub pre-release
         env:
