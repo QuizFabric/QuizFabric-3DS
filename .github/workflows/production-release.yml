@@ -66,7 +66,7 @@ jobs:
             --volume "$RUNNER_TEMP/bin:/tools:ro" \
             --workdir /project \
             devkitpro/devkitarm:latest \
-            bash -c 'set -e; export DEVKITPRO=/opt/devkitpro DEVKITARM=/opt/devkitpro/devkitARM PATH="/tools:/opt/devkitpro/tools/bin:/opt/devkitpro/devkitARM/bin:$PATH"; command -v arm-none-eabi-gcc; command -v makerom; command -v bannertool; make PROD=1 clean && make PROD=1'
+            bash -c 'set -e; export DEVKITPRO=/opt/devkitpro DEVKITARM=/opt/devkitpro/devkitARM PATH="/tools:/opt/devkitpro/tools/makerom:/opt/devkitpro/tools/bin:/opt/devkitpro/devkitARM/bin:$PATH"; command -v arm-none-eabi-gcc; command -v makerom; command -v bannertool; make PROD=1 clean && make PROD=1'
 
       - name: Create GitHub pre-release
         env:
