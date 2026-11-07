@@ -2,7 +2,9 @@
 
 Every push to `main` and every manual run of the **Production pre-release**
 workflow builds the production 3DS app and publishes a GitHub pre-release with
-the `.cia` and `.3dsx` files attached.
+the `.3dsx` attached. It also attaches the `.cia` when `makerom` and
+`bannertool` are available and CIA packaging succeeds; otherwise it publishes
+the `.3dsx` alone and notes the missing CIA in the release description.
 
 The app's displayed build number is the workflow run number plus 50. Before
 compiling, the workflow updates `source/build_number.h` and pushes that change

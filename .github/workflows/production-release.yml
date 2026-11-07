@@ -29,28 +29,44 @@ jobs:
         run: docker pull devkitpro/devkitarm:latest
 
       - name: Install bannertool
+        id: bannertool
         run: |
-          archive="$RUNNER_TEMP/bannertool-1.2.3-linux.tar.gz"
-          curl --fail --location --retry 3 \
-            --output "$archive" \
-            https://github.com/carstene1ns/3ds-bannertool/releases/download/1.2.3/bannertool-1.2.3-linux.tar.gz
-          echo "748519d200519db18e9fd00c332ac32f5411e41230258291e89953a76c1f7155  $archive" | sha256sum --check
-          tar -xzf "$archive" -C "$RUNNER_TEMP"
           mkdir -p "$RUNNER_TEMP/bin"
-          install -m 0755 "$RUNNER_TEMP/bannertool-1.2.3-linux/bannertool" "$RUNNER_TEMP/bin/bannertool"
-          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
-          "$RUNNER_TEMP/bin/bannertool" --version
+          available=false
+          archive="$RUNNER_TEMP/bannertool-1.2.3-linux.tar.gz"
+          if curl --fail --location --retry 3 \
+              --output "$archive" \
+              https://github.com/carstene1ns/3ds-bannertool/releases/download/1.2.3/bannertool-1.2.3-linux.tar.gz &&
+            echo "748519d200519db18e9fd00c332ac32f5411e41230258291e89953a76c1f7155  $archive" | sha256sum --check &&
+            tar -xzf "$archive" -C "$RUNNER_TEMP" &&
+            install -m 0755 "$RUNNER_TEMP/bannertool-1.2.3-linux/bannertool" "$RUNNER_TEMP/bin/bannertool" &&
+            "$RUNNER_TEMP/bin/bannertool" --version; then
+            available=true
+            echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+          else
+            echo "::warning::bannertool is unavailable; this release will contain only the 3DSX."
+          fi
+          echo "available=$available" >> "$GITHUB_OUTPUT"
 
       - name: Install makerom
+        id: makerom
         run: |
+          mkdir -p "$RUNNER_TEMP/bin"
+          available=false
           archive="$RUNNER_TEMP/makerom-v0.19.0-ubuntu_x86_64.zip"
-          curl --fail --location --retry 3 \
-            --output "$archive" \
-            https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.19.0/makerom-v0.19.0-ubuntu_x86_64.zip
-          echo "287b809dec064e0ad597e3d272c49ecb7eed41693d5ee6fef9d8a8aa24c249e0  $archive" | sha256sum --check
-          unzip -p "$archive" makerom > "$RUNNER_TEMP/bin/makerom"
-          chmod 0755 "$RUNNER_TEMP/bin/makerom"
-          test -x "$RUNNER_TEMP/bin/makerom"
+          if curl --fail --location --retry 3 \
+              --output "$archive" \
+              https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.19.0/makerom-v0.19.0-ubuntu_x86_64.zip &&
+            echo "287b809dec064e0ad597e3d272c49ecb7eed41693d5ee6fef9d8a8aa24c2497e  $archive" | sha256sum --check &&
+            unzip -p "$archive" makerom > "$RUNNER_TEMP/bin/makerom" &&
+            chmod 0755 "$RUNNER_TEMP/bin/makerom" &&
+            test -x "$RUNNER_TEMP/bin/makerom"; then
+            available=true
+            echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+          else
+            echo "::warning::makerom is unavailable; this release will contain only the 3DSX."
+          fi
+          echo "available=$available" >> "$GITHUB_OUTPUT"
 
       - name: Set and push app build number
         id: build-number
@@ -77,12 +93,37 @@ jobs:
             --volume "$RUNNER_TEMP/bin:/tools:ro" \
             --workdir /project \
             devkitpro/devkitarm:latest \
-            bash -c 'set -e; export DEVKITPRO=/opt/devkitpro DEVKITARM=/opt/devkitpro/devkitARM PATH="/tools:/opt/devkitpro/tools/bin:/opt/devkitpro/devkitARM/bin:$PATH"; command -v arm-none-eabi-gcc; command -v makerom; command -v bannertool; make PROD=1 clean && make PROD=1'
+            bash -c 'set -e; export DEVKITPRO=/opt/devkitpro DEVKITARM=/opt/devkitpro/devkitARM PATH="/tools:/opt/devkitpro/tools/bin:/opt/devkitpro/devkitARM/bin:$PATH"; command -v arm-none-eabi-gcc; make PROD=1 clean && make PROD=1 3dsx'
+
+      - name: Package production CIA when tools are available
+        id: package-cia
+        env:
+          MAKEROM_AVAILABLE: ${{ steps.makerom.outputs.available }}
+          BANNERTOOL_AVAILABLE: ${{ steps.bannertool.outputs.available }}
+        run: |
+          available=false
+          if [[ "$MAKEROM_AVAILABLE" == true && "$BANNERTOOL_AVAILABLE" == true ]]; then
+            if docker run --rm \
+                --user "$(id -u):$(id -g)" \
+                --volume "$GITHUB_WORKSPACE:/project" \
+                --volume "$RUNNER_TEMP/bin:/tools:ro" \
+                --workdir /project \
+                devkitpro/devkitarm:latest \
+                bash -c 'set -e; export DEVKITPRO=/opt/devkitpro DEVKITARM=/opt/devkitpro/devkitARM PATH="/tools:/opt/devkitpro/tools/bin:/opt/devkitpro/devkitARM/bin:$PATH"; command -v makerom; command -v bannertool; make PROD=1 cia'; then
+              available=true
+            else
+              echo "::warning::CIA packaging failed; this release will contain only the 3DSX."
+            fi
+          else
+            echo "::warning::makerom and/or bannertool could not be installed; this release will contain only the 3DSX."
+          fi
+          echo "available=$available" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub pre-release
         env:
           GH_TOKEN: ${{ github.token }}
           BUILD_NUMBER: ${{ steps.build-number.outputs.number }}
+          CIA_PACKAGE_AVAILABLE: ${{ steps.package-cia.outputs.available }}
         run: |
           TAG="build-$BUILD_NUMBER"
           LAST_TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName // ""')
@@ -96,9 +137,21 @@ jobs:
             NOTES="No commits since the previous release."
           fi
 
-          ASSETS=(QuizFabric3DSProd.cia QuizFabric3DSProd.3dsx)
+          ASSETS=(QuizFabric3DSProd.3dsx)
+          if [[ "$CIA_PACKAGE_AVAILABLE" == true && -f QuizFabric3DSProd.cia ]]; then
+            ASSETS+=(QuizFabric3DSProd.cia)
+            CIA_READY=true
+          else
+            CIA_READY=false
+            NOTES+=$'\n\n> The CIA was not included because makerom and/or bannertool was unavailable, or CIA packaging failed. The 3DSX is included.'
+          fi
+
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release edit "$TAG" --prerelease --title "build $BUILD_NUMBER" --notes "$NOTES"
+            if [[ "$CIA_READY" != true ]] &&
+              gh release view "$TAG" --json assets --jq '.assets[].name' | grep -Fxq QuizFabric3DSProd.cia; then
+              gh release delete-asset "$TAG" QuizFabric3DSProd.cia --yes
+            fi
             gh release upload "$TAG" "${ASSETS[@]}" --clobber
           else
             gh release create "$TAG" "${ASSETS[@]}" \
