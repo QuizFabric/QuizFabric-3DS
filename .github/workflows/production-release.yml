@@ -18,7 +18,7 @@ concurrency:
 jobs:
   build-and-release:
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -37,12 +37,25 @@ jobs:
           echo "/opt/devkitpro/tools/bin" >> "$GITHUB_PATH"
           echo "/opt/devkitpro/devkitARM/bin" >> "$GITHUB_PATH"
 
+      - name: Install bannertool
+        run: |
+          archive="$RUNNER_TEMP/bannertool-1.2.3-linux.tar.gz"
+          curl --fail --location --retry 3 \
+            --output "$archive" \
+            https://github.com/carstene1ns/3ds-bannertool/releases/download/1.2.3/bannertool-1.2.3-linux.tar.gz
+          echo "748519d200519db18e9fd00c332ac32f5411e41230258291e89953a76c1f7155  $archive" | sha256sum --check
+          tar -xzf "$archive" -C "$RUNNER_TEMP"
+          mkdir -p "$RUNNER_TEMP/bin"
+          install -m 0755 "$RUNNER_TEMP/bannertool-1.2.3-linux/bannertool" "$RUNNER_TEMP/bin/bannertool"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+          bannertool --version
+
       - name: Set and push app build number
         id: build-number
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          BUILD_NUMBER=$((GITHUB_RUN_NUMBER + 50))
+          BUILD_NUMBER=$((GITHUB_RUN_NUMBER + 49))
           echo "number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
           printf '#define APP_BUILD "%s"\n' "$BUILD_NUMBER" > source/build_number.h
 
