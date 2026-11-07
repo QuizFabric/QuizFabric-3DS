@@ -25,17 +25,8 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install devkitPro 3DS toolchain
-        run: |
-          wget -U "dkp-apt" https://apt.devkitpro.org/install-devkitpro-pacman
-          chmod +x ./install-devkitpro-pacman
-          sudo ./install-devkitpro-pacman
-          sudo dkp-pacman -Syu --noconfirm
-          sudo dkp-pacman -S --noconfirm 3ds-dev
-          echo "DEVKITPRO=/opt/devkitpro" >> "$GITHUB_ENV"
-          echo "DEVKITARM=/opt/devkitpro/devkitARM" >> "$GITHUB_ENV"
-          echo "/opt/devkitpro/tools/bin" >> "$GITHUB_PATH"
-          echo "/opt/devkitpro/devkitARM/bin" >> "$GITHUB_PATH"
+      - name: Pull devkitPro 3DS toolchain
+        run: docker pull devkitpro/devkitarm:latest
 
       - name: Install bannertool
         run: |
@@ -55,7 +46,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          BUILD_NUMBER=$((GITHUB_RUN_NUMBER + 49))
+          BUILD_NUMBER=$((GITHUB_RUN_NUMBER + 50))
           echo "number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
           printf '#define APP_BUILD "%s"\n' "$BUILD_NUMBER" > source/build_number.h
 
@@ -69,8 +60,13 @@ jobs:
 
       - name: Build production app
         run: |
-          make PROD=1 clean
-          make PROD=1
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            --volume "$GITHUB_WORKSPACE:/project" \
+            --volume "$RUNNER_TEMP/bin:/tools:ro" \
+            --workdir /project \
+            devkitpro/devkitarm:latest \
+            bash -c 'set -e; export DEVKITPRO=/opt/devkitpro DEVKITARM=/opt/devkitpro/devkitARM PATH="/tools:/opt/devkitpro/tools/bin:/opt/devkitpro/devkitARM/bin:$PATH"; command -v arm-none-eabi-gcc; command -v makerom; command -v bannertool; make PROD=1 clean && make PROD=1'
 
       - name: Create GitHub pre-release
         env:
