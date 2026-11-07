@@ -26,6 +26,7 @@
 #include "thumb.h"
 #include "ui.h"
 #include "ws.h"
+#include "build_number.h"
 
 #define CFG_DIR  "sdmc:/3ds/quizfabric"
 #define CFG_PATH "sdmc:/3ds/quizfabric/config.txt"
@@ -37,10 +38,6 @@
 
 // The server awards max(0, 1000 - seconds*50), so points hit zero at 20s.
 #define POINT_WINDOW_SEC 20.0f
-
-// Bump this on every change so the setup screen can prove which CIA is on
-// the console. (7 = tiled-RGBA8 image fix, 45 = close_rst recursion fix)
-#define APP_BUILD "50"
 
 // The production build talks to one fixed server; the dev build keeps the
 // editable server field.

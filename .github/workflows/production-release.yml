@@ -1,0 +1,88 @@
+name: Production pre-release
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - source/build_number.h
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: production-release
+  cancel-in-progress: false
+
+jobs:
+  build-and-release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install devkitPro 3DS toolchain
+        run: |
+          wget -U "dkp-apt" https://apt.devkitpro.org/install-devkitpro-pacman
+          chmod +x ./install-devkitpro-pacman
+          sudo ./install-devkitpro-pacman
+          sudo dkp-pacman -Syu --noconfirm
+          sudo dkp-pacman -S --noconfirm 3ds-dev
+          echo "DEVKITPRO=/opt/devkitpro" >> "$GITHUB_ENV"
+          echo "DEVKITARM=/opt/devkitpro/devkitARM" >> "$GITHUB_ENV"
+          echo "/opt/devkitpro/tools/bin" >> "$GITHUB_PATH"
+          echo "/opt/devkitpro/devkitARM/bin" >> "$GITHUB_PATH"
+
+      - name: Set and push app build number
+        id: build-number
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          BUILD_NUMBER=$((GITHUB_RUN_NUMBER + 50))
+          echo "number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
+          printf '#define APP_BUILD "%s"\n' "$BUILD_NUMBER" > source/build_number.h
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add source/build_number.h
+          if ! git diff --cached --quiet; then
+            git commit -m "Update app build number to $BUILD_NUMBER"
+            git push origin "HEAD:$GITHUB_REF"
+          fi
+
+      - name: Build production app
+        run: |
+          make PROD=1 clean
+          make PROD=1
+
+      - name: Create GitHub pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD_NUMBER: ${{ steps.build-number.outputs.number }}
+        run: |
+          TAG="build-$BUILD_NUMBER"
+          LAST_TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName // ""')
+
+          if [ -n "$LAST_TAG" ]; then
+            NOTES=$(git log --format='- %s (%h)' "$LAST_TAG"..HEAD)
+          else
+            NOTES=$(git log --format='- %s (%h)' HEAD)
+          fi
+          if [ -z "$NOTES" ]; then
+            NOTES="No commits since the previous release."
+          fi
+
+          ASSETS=(QuizFabric3DSProd.cia QuizFabric3DSProd.3dsx)
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --prerelease --title "build $BUILD_NUMBER" --notes "$NOTES"
+            gh release upload "$TAG" "${ASSETS[@]}" --clobber
+          else
+            gh release create "$TAG" "${ASSETS[@]}" \
+              --prerelease \
+              --title "build $BUILD_NUMBER" \
+              --notes "$NOTES"
+          fi

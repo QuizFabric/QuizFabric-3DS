@@ -1,0 +1,30 @@
+BasicInfo:
+  Title                   : "QuizFabric DS Prod"
+  CompanyCode             : "00"
+  ProductCode             : "CTR-P-QZDP"
+  ContentType             : Application
+  Logo                    : Nintendo
+
+TitleInfo:
+  UniqueId                : 0xF9A04
+  Category                : Application
+
+Option:
+  UseOnSD                 : true
+  FreeProductCode         : true
+  MediaFootPadding        : false
+  EnableCrypt             : false
+  EnableCompress          : false
+
+AccessControlInfo:
+  ExtSaveDataId: 0
+  SystemSaveDataId1: 0
+  SystemSaveDataId2: 0
+  OtherUserSaveDataId1: 0
+  OtherUserSaveDataId2: 0
+  UseOtherVariationSaveData: false
+
+SystemControlInfo:
+  SaveDataSize: 0KB
+  RemasterVersion: 0
+  StackSize: 0x40000
