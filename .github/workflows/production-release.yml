@@ -103,16 +103,27 @@ jobs:
         run: |
           available=false
           if [[ "$MAKEROM_AVAILABLE" == true && "$BANNERTOOL_AVAILABLE" == true ]]; then
-            if docker run --rm \
-                --user "$(id -u):$(id -g)" \
-                --volume "$GITHUB_WORKSPACE:/project" \
-                --volume "$RUNNER_TEMP/bin:/tools:ro" \
-                --workdir /project \
-                devkitpro/devkitarm:latest \
-                bash -c 'set -e; export DEVKITPRO=/opt/devkitpro DEVKITARM=/opt/devkitpro/devkitARM PATH="/tools:/opt/devkitpro/tools/bin:/opt/devkitpro/devkitARM/bin:$PATH"; command -v makerom; command -v bannertool; make PROD=1 cia'; then
+            mkdir -p build_prod
+            if bannertool makebanner \
+                -i assets/banner.png \
+                -a assets/audio.wav \
+                -o build_prod/banner.bnr &&
+              bannertool makesmdh \
+                -s "QuizFabric Prod" \
+                -l "Join live QuizFabric quizzes" \
+                -p "Nekky9180" \
+                -i assets/icon.png \
+                -o build_prod/icon.icn &&
+              makerom -f cia -target t -exefslogo \
+                -o QuizFabric3DSProd.cia \
+                -elf QuizFabric3DSProd.elf \
+                -rsf assets/app_prod.rsf \
+                -icon build_prod/icon.icn \
+                -banner build_prod/banner.bnr \
+                -major 1 -minor 0 -micro 0; then
               available=true
             else
-              echo "::warning::CIA packaging failed; this release will contain only the 3DSX."
+              echo "::warning::CIA packaging failed on the Ubuntu runner; this release will contain only the 3DSX."
             fi
           else
             echo "::warning::makerom and/or bannertool could not be installed; this release will contain only the 3DSX."
