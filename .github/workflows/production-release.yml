@@ -39,7 +39,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/bin"
           install -m 0755 "$RUNNER_TEMP/bannertool-1.2.3-linux/bannertool" "$RUNNER_TEMP/bin/bannertool"
           echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
-          bannertool --version
+          "$RUNNER_TEMP/bin/bannertool" --version
 
       - name: Set and push app build number
         id: build-number
